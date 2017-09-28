@@ -56,7 +56,7 @@ interruption: .db 0x00  ;; Store the index to current interruption [0..5]
 keys:   .db Key_CursorUp, Key_CursorDown, Key_CursorLeft, Key_CursorRight    ;; Keys for the game
         .db Key_Space, Key_Return, Key_Esc, Key_H, Key_M
 
-init_message:: .asciz "TINY HEROES 101 READY"
+init_message:: .asciz "TINY 101 READY"
 
 ;; Start of _CODE area
 ;; 
@@ -92,7 +92,21 @@ game::
     ld hl, #init_message    ;; Pointer to string
     ld b,#40                ;; pox
     ld c,#90                ;; posy
-    ld a,#1                   ;; not centered
+    ld a,#1                 ;; centered
+    call draw_text          ;; Shows a string on the screen
+    
+    message: .asciz "ONE SECOND MESSAGE"
+    ld hl, #message    ;; Pointer to string
+    ld b,#20                ;; pox
+    ld c,#150                ;; posy
+    ld a,#0                 ;; not centered
+    call draw_text          ;; Shows a string on the screen
+    
+    message2: .asciz "ONCE UPON A TIME 1234567890"
+    ld hl, #message2    ;; Pointer to string
+    ld b,#0                ;; pox
+    ld c,#0                ;; posy
+    ld a,#0                 ;; not centered
     call draw_text          ;; Shows a string on the screen
     
     forever:

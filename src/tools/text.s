@@ -11,6 +11,7 @@ xpos: .db #0
 ypos: .db #0
 string: .dw #0000
 posvmem: .dw #0000
+str_count: .db #0
 
 .globl _g_fonts_big_00 
 .globl _g_fonts_big_01 
@@ -60,7 +61,7 @@ posvmem: .dw #0000
 .globl _g_numbers_big_11 
 .globl _g_numbers_big_12
 
-font:   .dw _g_fonts_big_00, _g_fonts_big_01, _g_fonts_big_02, _g_fonts_big_03, _g_fonts_big_04
+letters:   .dw _g_fonts_big_00, _g_fonts_big_01, _g_fonts_big_02, _g_fonts_big_03, _g_fonts_big_04
         .dw _g_fonts_big_05, _g_fonts_big_06, _g_fonts_big_07, _g_fonts_big_08, _g_fonts_big_09
         .dw _g_fonts_big_10, _g_fonts_big_11, _g_fonts_big_12, _g_fonts_big_13, _g_fonts_big_14
         .dw _g_fonts_big_15, _g_fonts_big_16, _g_fonts_big_17, _g_fonts_big_18, _g_fonts_big_19
@@ -81,6 +82,7 @@ numbers:    .dw _g_numbers_big_00, _g_numbers_big_01, _g_numbers_big_02, _g_numb
 .globl divide
 .globl cpct_getScreenPtr_asm
 .globl cpct_drawSpriteMaskedAlignedTable_asm
+.globl CPCTM_MASKTABLE0M0
 
 ;;
 ;;  str_length: Count the number of characters in a string
@@ -123,9 +125,9 @@ draw_text::
     ld (xpos), a        ;; Store xpos for later use
     ld a, c
     ld (ypos), a        ;; Store ypos for later use
-    ld a, h
-    ld (string), a
     ld a, l
+    ld (string), a
+    ld a, h
     ld (string + 1), a  ;; Store string for later use
     pop af
     or a
@@ -143,44 +145,86 @@ draw_text::
     neg                 ;; 39 - (x / 2) * FONT_W;
     ld (xpos),a
 not_centered:
+    xor a               ;; ld a,#0
+    ld (str_count), a   ;; Initialize the counter for printing characters
+loop_dt: 
     ld a, (xpos)
     ld c, a             ;; Load x variable in the c register
+    ;; Load width of letter to multiply by offset
+    ld a, (font_W)         
+    ld b, a
+    ;; Get offset
+    ld a, (str_count)   ;; Add the position of the current character for printing 
+    push bc
+    call multiply       ;; Mulitply offset by font width
+    pop bc
+    add a, c            ;; and add the result to (xpos)
+    ld c, a
     ld a, (ypos)
     ld b, a             ;; Load x variable in the c register
     ;; Calculate a location for printing a string
-    ld   de, (pvideomem) ;;DE = Pointer to start of the screen
-    call cpct_getScreenPtr_asm ;; Calculate video memory location and return it in HL
-    ld (posvmem), hl
-loop_dt: 
-    ld hl, #string
+    ld   de, (pvideomem)        ;; DE = Pointer to start of the screen
+    call cpct_getScreenPtr_asm  ;; Calculate video memory location and return it in HL
+    ld (posvmem), hl            ;; Store it 
+
+    ld hl, (#string)
+    ld a, (str_count)
+    add a, l
+    ld l, a
     ld a, (hl)          ;; read current character
+    or a                ;; check if the character is 0
+    ret z               ;; If it's 0 the return
     ;; check if character is a number
     cp #48              ;; Check if the current character is bigger or equal than 48 
-    jp m, check_space   ;; jump if character is over 47
+    jp m, end_loop_dt  ;; jump if character is under 47
     cp #58
-    jp m, end_loop_dt   ;; check if character is under 57
-    ;; print charater
+    jp p, print_letter   ;; jump to print letter if character is over 57
+print_number:           ;; print number
     ;; cpct_drawSpriteMaskedAlignedTable(numbers[character - 48], pvideo, FONT_W, FONT_H, g_tablatrans);
-    ld hl, #font
+    ld hl, #numbers
     ld b, a             ;; Preserve the current character to make the calculation
-    sub #48             
+    sub #45             
     ld c, a
     ld a, b
+    sla c
     ld b, #0
-    add hl, bc     ;; calcularions for obtaining the sprite address
+    add hl, bc      ;; calcularions for obtaining the sprite address
     ld c,(hl) 
     inc hl          ;; storing the sprite address wich is store in the array
     ld b,(hl)  
     ld hl, (posvmem)
     ex de, hl
-    ld ix, (xpos)   ;; Load xpos on IX
-    
+    ld ix, (font_W)   ;; Load xpos on IX
+    push hl
+    ld hl, #CPCTM_MASKTABLE0M0
     call cpct_drawSpriteMaskedAlignedTable_asm
+    pop hl
     jr end_loop_dt
-check_space:
-    cp #32
-    jr nz, end_loop_dt
+print_letter:
+    cp #65              ;; Check if the current character is smaller or equal than 64
+    jp m, end_loop_dt   ;; jump if character is under 65
+    cp #90
+    jp p, end_loop_dt   ;; jump to end loop if character is over 90
+     ;;cpct_drawSpriteMaskedAlignedTable(font[character - 63], pvideo, FONT_W, FONT_H, g_tablatrans);
+    ld hl, #letters     ;; HL Points to the beginning of the letters table
+    ld b, a             ;; Preserve the current character to make the calculation
+    sub #63             ;; Substract 65 to match the ascii code of "A" with 0
+    ld c, a             ;; Loads the character in c 
+    sla c               ;; Multiply by 2 c, becuase the contents in the table are words (2 bytes)
+    ld a, b             ;;  ???????????????????????????    
+    ld b, #0
+    add hl, bc     ;; calcularions for obtaining the sprite address
+    ld c,(hl) 
+    inc hl          ;; storing the sprite address wich is store in the array in BC
+    ld b,(hl)  
+    ld hl, (posvmem)
+    ex de, hl
+    ld ix, (font_W)   ;; Load width and height in IX
+    ld hl, #CPCTM_MASKTABLE0M0
+    call cpct_drawSpriteMaskedAlignedTable_asm
 end_loop_dt:
-    inc hl
-    jr loop_dt
+    ld a, (str_count)
+    inc a
+    ld (str_count), a
+    jp loop_dt
     ret
