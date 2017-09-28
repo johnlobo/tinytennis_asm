@@ -7,8 +7,8 @@ font_W:: .db #3
 font_H:: .db #11
 str_len: .db #0
 aux: .db #0
-xpos: .db #0
 ypos: .db #0
+xpos: .db #0
 string: .dw #0000
 posvmem: .dw #0000
 str_count: .db #0
@@ -120,16 +120,8 @@ exit_sl:
 ;; 
 
 draw_text::
-    push af
-    ld a, b
-    ld (xpos), a        ;; Store xpos for later use
-    ld a, c
-    ld (ypos), a        ;; Store ypos for later use
-    ld a, l
-    ld (string), a
-    ld a, h
-    ld (string + 1), a  ;; Store string for later use
-    pop af
+    ld (ypos), bc
+    ld (string), hl
     or a
     jr z, not_centered  ;; Jump if string should not be centered
     call str_length     ;; Calculate the length of the string
