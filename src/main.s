@@ -17,52 +17,31 @@
 ;;-------------------------------------------------------------------------------
 
 
-;;===============================================================================
-;; DEFINED CONSTANTS
-;;===============================================================================
-
-pvideomem      = 0xC000  ;; First byte of video memory
-palete_size    = 16       ;; Number of total palette colours
-border_colour  = 0x0010  ;; 0x10 (Border ID), 0x00 (Colour to set: White).
-screen_Width   = 0x50    ;; Width of the screen in bytes (80 bytes, 0x50)
 ;;
 ;; Start of _DATA area
 ;;    (SDCC requires at least _DATA and _CODE areas to be declared. )
 ;;
 .area _DATA
 
-;; Symbols with the names of the CPCtelera functions we want to use
-;; must be declared globl to be recognized by the compiler. Later on,
-;; linker will do its job and make the calls go to function code.
-.globl cpct_disableFirmware_asm
-.globl cpct_setStackLocation_asm
-.globl cpct_setInterruptHandler_asm
-.globl cpct_setVideoMode_asm
-.globl cpct_setPalette_asm
-.globl cpct_setPALColour_asm
-.globl cpct_scanKeyboard_if_asm
-
-.globl draw_text
-
-.globl _sp_palette
-
-
-
-
-interruption: .db 0x00  ;; Store the index to current interruption [0..5]
-
-.include "keyboard/keyboard.s"
-
-keys:   .db Key_CursorUp, Key_CursorDown, Key_CursorLeft, Key_CursorRight    ;; Keys for the game
-        .db Key_Space, Key_Return, Key_Esc, Key_H, Key_M
-
-init_message:: .asciz "TINY 101 READY"
-
 ;; Start of _CODE area
 ;; 
 .area _CODE
 
+;; Symbols with the names of the CPCtelera functions we want to use
+;; must be declared globl to be recognized by the compiler. Later on,
+;; linker will do its job and make the calls go to function code.
+.include "cpctelera.h"
+.include "keyboard/keyboard.s"
+.include "tools/text.h"
+.include "tools/keyboard.h"
+.include "tools/tools.h"
+.include "sprites/sprites.h"
+.include "defines.h"
 
+interruption: .db 0x00  ;; Store the index to current interruption [0..5]
+
+keys:   .db Key_CursorUp, Key_CursorDown, Key_CursorLeft, Key_CursorRight    ;; Keys for the game
+        .db Key_Space, Key_Return, Key_Esc, Key_H, Key_M
 
 ;;
 ;;  New Interrupt Handler 
@@ -84,44 +63,67 @@ return_ih:
     ret
 
 
-;;
-;;  GAME
-;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;  FUNC: initGame
+;;      Game Loop Initialization
+;; 
+;;  INPUT: Nothing
+;;    
+;;  OUTPUT: Nothing
+;;  
+;;  DESTROYS:
+;;      A, B, HL, DE 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+initGame::
+
+    ret
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;  FUNC: Game
+;;      Game Loop
+;; 
+;;  INPUT: Nothing
+;;    
+;;  OUTPUT: Nothing
+;;  
+;;  DESTROYS:
+;;      A, B, HL, DE 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+message: .asciz "PRESS ANY KEY"
+
 game::
 
-    ld hl, #init_message    ;; Pointer to string
-    ld b,#40                ;; pox
-    ld c,#90                ;; posy
-    ld a,#1                 ;; centered
-    call draw_text          ;; Shows a string on the screen
+    ;;drawText("PRESS ANY KEY", 0, 90, 1);   
     
-    message: .asciz "ONE SECOND MESSAGE"
-    ld hl, #message    ;; Pointer to string
-    ld b,#20                ;; pox
-    ld c,#150                ;; posy
-    ld a,#0                 ;; not centered
-    call draw_text          ;; Shows a string on the screen
-    
-    message2: .asciz "ONCE UPON A TIME 1234567890"
-    ld hl, #message2    ;; Pointer to string
+    ld hl, #message        ;; Pointer to string
     ld b,#0                ;; pox
-    ld c,#0                ;; posy
-    ld a,#0                 ;; not centered
-    call draw_text          ;; Shows a string on the screen
+    ld c,#90               ;; posy
+    ld a,#1                ;; not centered
+    call draw_text         ;; Shows a string on the screen
+
+    
+    ;;cpct_srand8(wait4UserKeypress())
+    call wait4UserKeypress          ;; Wait for keypress and return in DE,HL the number of cycles waited
+    call cpct_setSeed_mxor_asm      ;; set the seed for random generation based on DE,HL
+    
+    call initGame                   ;; Game initialization
     
     forever:
     jp forever        ;; Infinite waiting loop
 
     ret
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; FUNC: initialize
 ;;    Sets CPC to its initial status
 ;; DESTROYS:
-;;    AF, BC, DE, HL
+;;   AF, BC, DE, HL
 ;;
+
 initialize::
    ;; Disable Firmware
     call  cpct_disableFirmware_asm   ;; Disable firmware
@@ -144,7 +146,6 @@ initialize::
     call  cpct_setPALColour_asm      ;; Set the border (colour 16)
 
     ret                              ;; return
-
 
 ;;
 ;; MAIN function. This is the entry point of the application.
