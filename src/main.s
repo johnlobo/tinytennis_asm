@@ -76,6 +76,7 @@ return_ih:
 ;;      A, B, HL, DE 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 initGame::
+    call clear_screen
 
     ret
 
@@ -142,8 +143,8 @@ initialize::
     call  cpct_setPalette_asm        ;; Set the new palette
 
    ;; Change border colour
-    ld    hl, #border_colour         ;; L=Border colour value, H=Palette Colour to be set (Border=16)
-    call  cpct_setPALColour_asm      ;; Set the border (colour 16)
+    ;;ld    hl, #border_colour         ;; L=Border colour value, H=Palette Colour to be set (Border=16)
+    ;;call  cpct_setPALColour_asm      ;; Set the border (colour 16)
 
     ret                              ;; return
 

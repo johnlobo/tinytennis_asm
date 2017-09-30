@@ -20,10 +20,10 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 clear_screen::
-    ld hl, #pvideomem
-    ld de, #0000
-    ld bc, #4000
-    call cpct_memset_f64_asm
+    ld de, #pvideomem
+    ld a, #00
+    ld bc, #0x4000
+    call cpct_memset_asm
     ret
 
 ;;i16 sign(i16 x)

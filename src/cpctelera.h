@@ -2,7 +2,6 @@
 .globl cpct_drawSpriteMaskedAlignedTable_asm
 .globl cpct_getScreenPtr_asm
 .globl cpct_isAnyKeyPressed_f_asm
-.globl cpct_memset_f64_asm
 .globl cpct_setInterruptHandler_asm
 .globl cpct_scanKeyboard_if_asm
 .globl cpct_setPalette_asm
@@ -10,3 +9,4 @@
 .globl cpct_setSeed_mxor_asm
 .globl cpct_setStackLocation_asm
 .globl cpct_setVideoMode_asm
+.globl cpct_memset_asm
